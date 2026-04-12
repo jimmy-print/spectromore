@@ -13,15 +13,16 @@ CYAN = (0, 255, 255)
 D_WIDTH, D_HEIGHT = 1850, 800
 display = pygame.display.set_mode((D_WIDTH, D_HEIGHT))
 
-#with open('file2amono.wav', 'rb') as f:
-audiofilename = 'untitled.wav'
+audiofilename = 'untitleda.wav'
 with open(audiofilename, 'rb') as f:
     data = f.read()
 data = [hex(n)[2:].zfill(2) for n in data]
-
-seconds = 5
-hzr = 44100
-hz = 44100*seconds
+import wave
+with wave.open(audiofilename, 'rb') as wavefile:
+    sample_rate = wavefile.getparams().framerate
+seconds = 2
+hzr = sample_rate
+hz = sample_rate*seconds
 d = data[80:80+hz*2]
 
 import struct
@@ -160,14 +161,14 @@ def main():
         playhead = (seconds_in * hzr) * width
         pygame.draw.rect(display, RED, (playhead, 100, 1, 200))
 
-        display.blit(onesurf, (1*hzr*width, 100))
-        display.blit(twosurf, (2*hzr*width, 100))
-        display.blit(threesurf, (3*hzr*width, 100))
+        display.blit(onesurf, (1*hzr*width, D_HEIGHT-50))
+        display.blit(twosurf, (2*hzr*width, D_HEIGHT-50))
+        display.blit(threesurf, (3*hzr*width, D_HEIGHT-50))
 
         # Display waveform
         for i, all_ in enumerate(alls):
             height = (all_/32767)*D_HEIGHT
-            height/=2
+            height/=4
             pygame.draw.rect(display, WHITE, (
                 i*width, baseline-height/2, 1, height))
 
