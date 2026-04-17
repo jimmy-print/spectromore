@@ -3,6 +3,7 @@
 import pygame
 import numpy as np
 import matplotlib.pyplot as plt
+import colorsys
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -25,8 +26,6 @@ hzr = sample_rate
 hz = sample_rate*seconds
 d = data[80:80+hz*2]
 
-import struct
-
 tmp = []
 alls = []
 for i in range(len(d)):
@@ -38,7 +37,6 @@ for i in range(len(d)):
         tmp = []
 
 def main():
-
     width = D_WIDTH / hz
     baseline = D_HEIGHT/4
 
@@ -52,9 +50,6 @@ def main():
     onesurf = font.render('1', False, WHITE)
     twosurf = font.render('2', False, WHITE)
     threesurf = font.render('3', False, WHITE)
-
-
-
 
     def get_freqs_and_amplitudes(hzrrange0, hzrrange1):
         firstsplice = alls[int(hzr*hzrrange0):int(hzr*hzrrange1)]
@@ -86,8 +81,11 @@ def main():
     interval = 0.006
     freq_n = len(get_freqs_and_amplitudes(hzrrange0, hzrrange0+interval)[0])
     ALL = []
+    maxs = []
     for _ in range(int((seconds-hzrrange0)*(1/interval))):
-        ALL.append(list(get_freqs_and_amplitudes(hzrrange0, hzrrange0+interval)))
+        this = list(get_freqs_and_amplitudes(hzrrange0, hzrrange0+interval))
+        maxs.append(max(this[1]))
+        ALL.append(this)
         try:
             assert freq_n == len(ALL[-1][0])
         except AssertionError:
@@ -145,15 +143,21 @@ def main():
         for i, elem in enumerate(ALL):
             freqs = elem[0]
             ampss = elem[1]
-            max_amps = 5000000
+            max_amps = max(maxs)
+            gap = 1
+            height=2
             for j, (freq, amps) in enumerate(zip(freqs, ampss)):
-                color = (255 * (amps/max_amps), 255* (amps/max_amps), 255 * (amps/max_amps))
+                ratio = amps/max_amps
+                hsv = colorsys.hsv_to_rgb(ratio, 0.9, 0.6*ratio+0.3)
+                color = hsv[0] * 255, hsv[1] * 255, hsv[2] * 255
+ 
+                #color = (255 * (amps/max_amps), 255* (amps/max_amps), 255 * (amps/max_amps))
 
                 rect = (
                     ((starting_time+interval*i)*width*hzr),
-                    750 - j * 6.5, #y
+                    750 - j * (height+gap), #y
                     5,
-                    5,)
+                    height,)
 
                 #print(rect)
                 pygame.draw.rect(display, color, rect)
@@ -174,5 +178,7 @@ def main():
 
         pygame.display.update()
 
+
 if __name__ == '__main__':
     main()
+
