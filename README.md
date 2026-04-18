@@ -7,4 +7,8 @@ Next steps
   - This would require a more detailed spectrogram, also with color.
   - which in turn requires a more thorough understanding of fourier transform.
 
+- Right now, I am not deciding the frequency bins at all.
+
+- Use pixelarray to calculate the pixels of the spectrogram, then blit at once instead of using pygame.draw.rect in a for loop.
+
 ![alt text](https://raw.githubusercontent.com/jimmy-print/spectromore/refs/heads/main/demo%20with%20sine%20and%20saw%20waves.png)

@@ -4,6 +4,7 @@ import pygame
 import numpy as np
 import matplotlib.pyplot as plt
 import colorsys
+import wave
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -14,17 +15,18 @@ CYAN = (0, 255, 255)
 D_WIDTH, D_HEIGHT = 1850, 800
 display = pygame.display.set_mode((D_WIDTH, D_HEIGHT))
 
-audiofilename = 'untitleda.wav'
+audiofilename = 'file2amono.wav'
 with open(audiofilename, 'rb') as f:
-    data = f.read()
-data = [hex(n)[2:].zfill(2) for n in data]
-import wave
+    raw_data = f.read()
+    hexadecimal_string_data = [hex(n)[2:].zfill(2) for n in raw_data]
+
 with wave.open(audiofilename, 'rb') as wavefile:
     sample_rate = wavefile.getparams().framerate
-seconds = 2
+
+seconds_to_load = 2
 hzr = sample_rate
-hz = sample_rate*seconds
-d = data[80:80+hz*2]
+hz = sample_rate*seconds_to_load
+d = hexadecimal_string_data[80:80+hz*2]
 
 tmp = []
 alls = []
@@ -38,7 +40,7 @@ for i in range(len(d)):
 
 def main():
     width = D_WIDTH / hz
-    baseline = D_HEIGHT/4
+    baseline = D_HEIGHT/8
 
     index = 0
     index_change = 0
@@ -82,7 +84,7 @@ def main():
     freq_n = len(get_freqs_and_amplitudes(hzrrange0, hzrrange0+interval)[0])
     ALL = []
     maxs = []
-    for _ in range(int((seconds-hzrrange0)*(1/interval))):
+    for _ in range(int((seconds_to_load - hzrrange0)*(1/interval))):
         this = list(get_freqs_and_amplitudes(hzrrange0, hzrrange0+interval))
         maxs.append(max(this[1]))
         ALL.append(this)
@@ -102,8 +104,13 @@ def main():
     seconds_in = 0
     clock = pygame.time.Clock()
     frames = 0
+
+    selected = 0
     while True:
         display.fill(BLACK)
+
+
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
@@ -123,9 +130,14 @@ def main():
                         seconds_in = 0
                     else:
                         pygame.mixer.music.stop()
+                if event.key == pygame.K_RIGHT:
+                    selected += 1
+                if event.key == pygame.K_LEFT:
+                    selected -= 1
             if event.type == pygame.KEYUP:
                 index_change = 0
                 width_change = 0
+
         clock.tick()
         frames += 1
         fps = clock.get_fps()
@@ -136,35 +148,40 @@ def main():
         index += index_change
         width += width_change
 
-        for f in range(freq_n):
-            pygame.draw.rect(display, CYAN, (10, 750-f*6.5, 10, 1))            
-
         # Display spectrogram
         for i, elem in enumerate(ALL):
             freqs = elem[0]
             ampss = elem[1]
             max_amps = max(maxs)
+
             gap = 1
-            height=2
+            height = 3
+
             for j, (freq, amps) in enumerate(zip(freqs, ampss)):
                 ratio = amps/max_amps
                 hsv = colorsys.hsv_to_rgb(ratio, 0.9, 0.6*ratio+0.3)
                 color = hsv[0] * 255, hsv[1] * 255, hsv[2] * 255
  
-                #color = (255 * (amps/max_amps), 255* (amps/max_amps), 255 * (amps/max_amps))
-
                 rect = (
                     ((starting_time+interval*i)*width*hzr),
                     750 - j * (height+gap), #y
-                    5,
+                    interval*width*hzr,
                     height,)
 
-                #print(rect)
                 pygame.draw.rect(display, color, rect)
+        
+        # Draw selector
+        pygame.draw.rect(display, WHITE, ((starting_time + interval*selected)*width*hzr,
+                                          750 + 10,
+                                          interval*width*hzr,
+                                          200))
+
+        print(ALL[selected][0])
 
         playhead = (seconds_in * hzr) * width
         pygame.draw.rect(display, RED, (playhead, 100, 1, 200))
 
+        # Display seconds footer
         display.blit(onesurf, (1*hzr*width, D_HEIGHT-50))
         display.blit(twosurf, (2*hzr*width, D_HEIGHT-50))
         display.blit(threesurf, (3*hzr*width, D_HEIGHT-50))
@@ -172,7 +189,7 @@ def main():
         # Display waveform
         for i, all_ in enumerate(alls):
             height = (all_/32767)*D_HEIGHT
-            height/=4
+            height/=7
             pygame.draw.rect(display, WHITE, (
                 i*width, baseline-height/2, 1, height))
 
