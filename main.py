@@ -5,8 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import colorsys
 import wave
-
 import time
+import sys
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -17,7 +17,7 @@ CYAN = (0, 255, 255)
 D_WIDTH, D_HEIGHT = 1850, 800
 display = pygame.display.set_mode((D_WIDTH, D_HEIGHT))
 
-audiofilename = 'untitleda.wav'
+audiofilename = sys.argv[1]
 with open(audiofilename, 'rb') as f:
     raw_data = f.read()
     hexadecimal_string_data = [hex(n)[2:].zfill(2) for n in raw_data]
@@ -30,7 +30,10 @@ print(f'Loading file: {audiofilename}')
 print(f'Sample rate: {samples_per_second} hz')
 print()
 
-seconds_to_load = 1
+try:
+    seconds_to_load = int(sys.argv[2])
+except IndexError:
+    seconds_to_load = 1
 samples_to_load = samples_per_second * seconds_to_load
 d = hexadecimal_string_data[80:80 + samples_to_load * 2]
 # mul. by 2 because 16 bit signed int means 2 bytes compose each sample.
@@ -142,6 +145,7 @@ def main():
     surf = pygame.Surface((sptg_width, sptg_height))
     print(f'pixelarray width: {surf.get_width()}, height: {surf.get_height()}')
     
+    monochrome = False
     def generate_pixelarray(surf):
         pixels = pygame.PixelArray(surf)
 
@@ -149,18 +153,20 @@ def main():
             for jth_freq_band, amplitude in enumerate(amplitudes):
                 ratio = amplitude / max(maxs)
                 hsv = colorsys.hsv_to_rgb(ratio, 0.9, 0.6*ratio+0.3)
-                color = hsv[0] * 255, hsv[1] * 255, hsv[2] * 255
+                if monochrome:
+                    color = (255 * ratio,) * 3
+                else:
+                    color = hsv[0] * 255, hsv[1] * 255, hsv[2] * 255
                 
                 x = (starting_time + (ith_fft_interval * fft_interval_s)) * samples_per_second * px_width_per_sample
                 y = (jth_freq_band * each_freq_band_height_px)
                 x_width = fft_interval_s * samples_per_second * px_width_per_sample
                 y_height = each_freq_band_height_px
 
-                for _ in range(int(x_width)):
-                    for __ in range(int(y_height)):
-                        pixels[int(x+_), int(y+__)] = color
+                for xd in range(int(x_width)):
+                    for yd in range(int(y_height)):
+                        pixels[int(x + xd), sptg_height - int(y + yd) - 1] = color
         del pixels
-        surf = pygame.transform.flip(surf, 0, 1)
     generate_pixelarray(surf)
 
     pygame.mixer.init()
@@ -169,10 +175,14 @@ def main():
 
     seconds_in = 0
     clock = pygame.time.Clock()
+    desired_FPS = 30
     frames = 0
 
     selected = 0
     selected_d = 0
+
+    drawing_waveform = False
+
     while True:
         display.fill(BLACK)
 
@@ -213,7 +223,14 @@ def main():
                 if event.key == pygame.K_RIGHT:
                     selected_d = 1
                 if event.key == pygame.K_LEFT:
-                    selected_ = -1
+                    selected_d = -1
+                
+                if event.key == pygame.K_m:
+                    monochrome = not monochrome
+                    generate_pixelarray(surf)
+
+                if event.key == pygame.K_w:
+                    drawing_waveform = not drawing_waveform
 
             if event.type == pygame.KEYUP:
                 index_change = 0
@@ -221,7 +238,7 @@ def main():
                 selected_d = 0
 
         selected += selected_d
-        clock.tick()
+        clock.tick(desired_FPS)
         frames += 1
         fps = clock.get_fps()
 
@@ -240,7 +257,7 @@ def main():
                                           200))
 
         playhead = (seconds_in * samples_per_second) * px_width_per_sample
-        pygame.draw.rect(display, RED, (playhead, 100, 1, 200))
+        pygame.draw.rect(display, RED, (playhead, D_HEIGHT - bottom_vertical_margin * 2, 1, 200))
 
         # Display seconds footer
         display.blit(onesurf, (1 * samples_per_second * px_width_per_sample, D_HEIGHT-50))
@@ -248,11 +265,12 @@ def main():
         display.blit(threesurf, (3 * samples_per_second * px_width_per_sample, D_HEIGHT-50))
 
         # Display waveform
-        for i, all_ in enumerate(alls):
-            height = (all_/32767)*D_HEIGHT
-            height /= 7
-            pygame.draw.rect(display, WHITE, (
-                i*px_width_per_sample, baseline-height/2, 1, height))
+        if drawing_waveform:
+            for i, all_ in enumerate(alls):
+                height = (all_/32767)*D_HEIGHT
+                height /= 7
+                pygame.draw.rect(display, WHITE, (
+                    i*px_width_per_sample, baseline-height/2, 1, height))
 
         pygame.display.flip()
 
