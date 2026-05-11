@@ -7,6 +7,7 @@ import colorsys
 import wave
 import time
 import sys
+import math
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -85,7 +86,7 @@ def main():
 
     starting_time = 0.01
     hzrrange0 = starting_time
-    fft_interval_s = 0.01
+    fft_interval_s = 0.001
 
     freq_n = len(get_freqs_and_amplitudes(hzrrange0, hzrrange0+fft_interval_s)[0])
     amplitude_n = len(get_freqs_and_amplitudes(hzrrange0, hzrrange0+fft_interval_s)[1])
@@ -145,13 +146,16 @@ def main():
     surf = pygame.Surface((sptg_width, sptg_height))
     print(f'pixelarray width: {surf.get_width()}, height: {surf.get_height()}')
     
-    monochrome = False
+    monochrome = True
     def generate_pixelarray(surf):
         pixels = pygame.PixelArray(surf)
 
         for ith_fft_interval, (freqs, amplitudes) in enumerate(zip(Freqss, Amplitudess)):
             for jth_freq_band, amplitude in enumerate(amplitudes):
                 ratio = amplitude / max(maxs)
+                b = 7
+                #ratio = abs((1/b)*(math.log(ratio)+b))
+                #print(ratio)
                 hsv = colorsys.hsv_to_rgb(ratio, 0.9, 0.6*ratio+0.3)
                 if monochrome:
                     color = (255 * ratio,) * 3
